@@ -332,6 +332,7 @@ public abstract class NettyRemotingAbstract {
      */
     public void scanResponseTable() {
         final List<ResponseFuture> rfList = new LinkedList<ResponseFuture>();
+        //遍历正在处理的请求，丢弃超时的请求
         Iterator<Entry<Integer, ResponseFuture>> it = this.responseTable.entrySet().iterator();
         while (it.hasNext()) {
             Entry<Integer, ResponseFuture> next = it.next();

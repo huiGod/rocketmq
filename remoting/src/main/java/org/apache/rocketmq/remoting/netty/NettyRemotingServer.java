@@ -170,9 +170,17 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
             && Epoll.isAvailable();
     }
 
+    /**
+     * Reactor主线程在端口上监听Producer建立连接的请求，建立长连接
+     * Reactor线程池并发的监听多个连接的请求是否到达
+     * Worker请求并发的对多个请求进行预处理
+     * 业务线程池并发的对多个请求进行磁盘读写业务操作
+     */
     @Override
     public void start() {
+        //Worker 线程池
         this.defaultEventExecutorGroup = new DefaultEventExecutorGroup(
+
             nettyServerConfig.getServerWorkerThreads(),
             new ThreadFactory() {
 
@@ -183,8 +191,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                     return new Thread(r, "NettyServerCodecThread_" + this.threadIndex.incrementAndGet());
                 }
             });
-
+        //构造ServerBootstrap
         ServerBootstrap childHandler =
+            //eventLoopGroupBoss默认1个线程，eventLoopGroupSelector默认3个线程
             this.serverBootstrap.group(this.eventLoopGroupBoss, this.eventLoopGroupSelector)
                 .channel(useEpoll() ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
                 .option(ChannelOption.SO_BACKLOG, 1024)
@@ -198,6 +207,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
                         ch.pipeline()
+                            //defaultEventExecutorGroup负责准备工作和预处理，比如 SSL 加密验证、编解码、连接空闲检查、网络连接管理
                             .addLast(defaultEventExecutorGroup, HANDSHAKE_HANDLER_NAME,
                                 new HandshakeHandler(TlsSystemConfig.tlsMode))
                             .addLast(defaultEventExecutorGroup,
@@ -226,6 +236,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
             this.nettyEventExecutor.start();
         }
 
+        //定时处理超时的请求
         this.timer.scheduleAtFixedRate(new TimerTask() {
 
             @Override
