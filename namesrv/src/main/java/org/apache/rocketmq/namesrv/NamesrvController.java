@@ -55,6 +55,11 @@ public class NamesrvController {
 
     private Configuration configuration;
 
+    /**
+     * 配置都是通过类的方式注入
+     * @param namesrvConfig
+     * @param nettyServerConfig
+     */
     public NamesrvController(NamesrvConfig namesrvConfig, NettyServerConfig nettyServerConfig) {
         this.namesrvConfig = namesrvConfig;
         this.nettyServerConfig = nettyServerConfig;
@@ -71,14 +76,15 @@ public class NamesrvController {
     public boolean initialize() {
 
         this.kvConfigManager.load();
-
+        //创建ServerBootstrap并设置相关线程配置
         this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);
-
+        //创建Worker线程池
         this.remotingExecutor =
             Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl("RemotingExecutorThread_"));
-
+        //将Worker线程池绑定到 Netty 上，用来处理网络请求。同时创建了默认请求命令处理器
         this.registerProcessor();
 
+        //定时任务扫描非活动的Broker，超过2分钟就关闭连接
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -87,6 +93,7 @@ public class NamesrvController {
             }
         }, 5, 10, TimeUnit.SECONDS);
 
+        //定期打印配置文件
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -104,7 +111,7 @@ public class NamesrvController {
             this.remotingServer.registerDefaultProcessor(new ClusterTestRequestProcessor(this, namesrvConfig.getProductEnvName()),
                 this.remotingExecutor);
         } else {
-
+            //将 worker 线程池绑定到 Netty上，来处理请求
             this.remotingServer.registerDefaultProcessor(new DefaultRequestProcessor(this), this.remotingExecutor);
         }
     }

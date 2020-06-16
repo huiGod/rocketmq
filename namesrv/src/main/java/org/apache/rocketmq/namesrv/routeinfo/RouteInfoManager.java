@@ -406,6 +406,9 @@ public class RouteInfoManager {
         return null;
     }
 
+    /**
+     * 超过2分钟 Broker 未响应，则关闭该 Broker 连接
+     */
     public void scanNotActiveBroker() {
         Iterator<Entry<String, BrokerLiveInfo>> it = this.brokerLiveTable.entrySet().iterator();
         while (it.hasNext()) {

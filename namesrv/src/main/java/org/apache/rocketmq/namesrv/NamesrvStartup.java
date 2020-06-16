@@ -38,6 +38,9 @@ import org.apache.rocketmq.srvutil.ShutdownHookThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * NameServer 进程启动类
+ */
 public class NamesrvStartup {
     public static Properties properties = null;
     public static CommandLine commandLine = null;
@@ -50,17 +53,20 @@ public class NamesrvStartup {
         System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
         try {
             //PackageConflictDetect.detectFastjson();
-
+            //命令行参数解析
             Options options = ServerUtil.buildCommandlineOptions(new Options());
             commandLine = ServerUtil.parseCmdLine("mqnamesrv", args, buildCommandlineOptions(options), new PosixParser());
             if (null == commandLine) {
                 System.exit(-1);
                 return null;
             }
-
+            //NameServer 相关配置类
             final NamesrvConfig namesrvConfig = new NamesrvConfig();
+            //Netty 服务端配置类
             final NettyServerConfig nettyServerConfig = new NettyServerConfig();
+            //设置端口号
             nettyServerConfig.setListenPort(9876);
+            //启动参数如果有“-c”选项，会读取配置文件的地址里的内容
             if (commandLine.hasOption('c')) {
                 String file = commandLine.getOptionValue('c');
                 if (file != null) {
@@ -76,7 +82,7 @@ public class NamesrvStartup {
                     in.close();
                 }
             }
-
+            //启动参数如果有“-p”选项，会打印出配置信息
             if (commandLine.hasOption('p')) {
                 MixAll.printObjectProperties(null, namesrvConfig);
                 MixAll.printObjectProperties(null, nettyServerConfig);
@@ -105,12 +111,14 @@ public class NamesrvStartup {
             // remember all configs to prevent discard
             controller.getConfiguration().registerConfig(properties);
 
+            //初始化NamesrvController
             boolean initResult = controller.initialize();
             if (!initResult) {
                 controller.shutdown();
                 System.exit(-3);
             }
 
+            //JVM 关闭的时候执行的回调钩子，用于释放一些资源
             Runtime.getRuntime().addShutdownHook(new ShutdownHookThread(log, new Callable<Void>() {
                 @Override
                 public Void call() throws Exception {
@@ -119,6 +127,7 @@ public class NamesrvStartup {
                 }
             }));
 
+            //启动NamesrvController
             controller.start();
 
             String tip = "The Name Server boot success. serializeType=" + RemotingCommand.getSerializeTypeConfigInThisServer();
