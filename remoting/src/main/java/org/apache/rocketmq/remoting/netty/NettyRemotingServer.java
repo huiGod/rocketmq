@@ -203,18 +203,23 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                 .childOption(ChannelOption.SO_SNDBUF, nettyServerConfig.getServerSocketSndBufSize())
                 .childOption(ChannelOption.SO_RCVBUF, nettyServerConfig.getServerSocketRcvBufSize())
                 .localAddress(new InetSocketAddress(this.nettyServerConfig.getListenPort()))
+                //设置网络请求处理器，Netty 服务器接受到一个请求，会一次执行下面处理器
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
                         ch.pipeline()
-                            //defaultEventExecutorGroup负责准备工作和预处理，比如 SSL 加密验证、编解码、连接空闲检查、网络连接管理
+                            //扶着连接握手
                             .addLast(defaultEventExecutorGroup, HANDSHAKE_HANDLER_NAME,
                                 new HandshakeHandler(TlsSystemConfig.tlsMode))
                             .addLast(defaultEventExecutorGroup,
+                                //负责编解码
                                 new NettyEncoder(),
                                 new NettyDecoder(),
+                                //负责连接空闲管理
                                 new IdleStateHandler(0, 0, nettyServerConfig.getServerChannelMaxIdleTimeSeconds()),
+                                //负责网络连接管理
                                 new NettyConnectManageHandler(),
+                                //网络请求处理器
                                 new NettyServerHandler()
                             );
                     }
@@ -225,6 +230,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         }
 
         try {
+            //启动Netty 服务器，绑定和监听一个端口号
             ChannelFuture sync = this.serverBootstrap.bind().sync();
             InetSocketAddress addr = (InetSocketAddress) sync.channel().localAddress();
             this.port = addr.getPort();

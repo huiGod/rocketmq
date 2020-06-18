@@ -143,13 +143,18 @@ public class BrokerController {
         final NettyClientConfig nettyClientConfig,
         final MessageStoreConfig messageStoreConfig
     ) {
+        //配置保存
         this.brokerConfig = brokerConfig;
         this.nettyServerConfig = nettyServerConfig;
         this.nettyClientConfig = nettyClientConfig;
         this.messageStoreConfig = messageStoreConfig;
+        //管理 consumer 消费 offset 的组件
         this.consumerOffsetManager = new ConsumerOffsetManager(this);
+        //管理 Topic 配置的组件
         this.topicConfigManager = new TopicConfigManager(this);
+        //处理 Consumer 发送请求拉取消息的组件
         this.pullMessageProcessor = new PullMessageProcessor(this);
+
         this.pullRequestHoldService = new PullRequestHoldService(this);
         this.messageArrivingListener = new NotifyMessageArrivingListener(this.pullRequestHoldService);
         this.consumerIdsChangeListener = new DefaultConsumerIdsChangeListener(this);
@@ -164,6 +169,7 @@ public class BrokerController {
 
         this.slaveSynchronize = new SlaveSynchronize(this);
 
+        //上述组件对应的一些线程池队列，用来后台处理对应的请求
         this.sendThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getSendThreadPoolQueueCapacity());
         this.pullThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getPullThreadPoolQueueCapacity());
         this.queryThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getQueryThreadPoolQueueCapacity());
@@ -198,6 +204,7 @@ public class BrokerController {
     }
 
     public boolean initialize() throws CloneNotSupportedException {
+        //加载磁盘上的配置到内存
         boolean result = this.topicConfigManager.load();
 
         result = result && this.consumerOffsetManager.load();

@@ -26,6 +26,9 @@ import org.slf4j.LoggerFactory;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+/**
+ * Broker配置类
+ */
 public class BrokerConfig {
     private static final Logger log = LoggerFactory.getLogger(LoggerName.COMMON_LOGGER_NAME);
 
@@ -42,6 +45,7 @@ public class BrokerConfig {
     @ImportantField
     private long brokerId = MixAll.MASTER_ID;
     private int brokerPermission = PermName.PERM_READ | PermName.PERM_WRITE;
+    //Topic 下默认队列数
     private int defaultTopicQueueNums = 8;
     @ImportantField
     private boolean autoCreateTopicEnable = true;
@@ -57,8 +61,11 @@ public class BrokerConfig {
      * thread numbers for send message thread pool, since spin lock will be used by default since 4.0.x, the default
      * value is 1.
      */
+    //发送消息的线程数
     private int sendMessageThreadPoolNums = 1; //16 + Runtime.getRuntime().availableProcessors() * 4;
+    //拉取消息的线程数
     private int pullMessageThreadPoolNums = 16 + Runtime.getRuntime().availableProcessors() * 2;
+    //查询消息的线程数
     private int queryMessageThreadPoolNums = 8 + Runtime.getRuntime().availableProcessors();
 
     private int adminBrokerThreadPoolNums = 16;

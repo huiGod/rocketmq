@@ -16,6 +16,8 @@
  */
 package org.apache.rocketmq.broker;
 
+import static org.apache.rocketmq.remoting.netty.TlsSystemConfig.TLS_ENABLE;
+
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
 import java.io.BufferedInputStream;
@@ -44,8 +46,6 @@ import org.apache.rocketmq.store.config.MessageStoreConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.rocketmq.remoting.netty.TlsSystemConfig.TLS_ENABLE;
-
 public class BrokerStartup {
     public static Properties properties = null;
     public static CommandLine commandLine = null;
@@ -56,6 +56,7 @@ public class BrokerStartup {
         start(createBrokerController(args));
     }
 
+    //启动BrokerController
     public static BrokerController start(BrokerController controller) {
         try {
 
@@ -78,9 +79,15 @@ public class BrokerStartup {
         return null;
     }
 
+    /**
+     * 创建BrokerController
+     * @param args
+     * @return
+     */
     public static BrokerController createBrokerController(String[] args) {
         System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
 
+        //设置 Netty 网络通信相关的变量
         if (null == System.getProperty(NettySystemConfig.COM_ROCKETMQ_REMOTING_SOCKET_SNDBUF_SIZE)) {
             NettySystemConfig.socketSndbufSize = 131072;
         }
@@ -98,13 +105,18 @@ public class BrokerStartup {
                 System.exit(-1);
             }
 
+            //Broker配置类
             final BrokerConfig brokerConfig = new BrokerConfig();
+            //Netty服务端配置类。用于 producer 和 consumer 连接
             final NettyServerConfig nettyServerConfig = new NettyServerConfig();
+            //Netty客户端配置类。用于连接NameServer
             final NettyClientConfig nettyClientConfig = new NettyClientConfig();
 
             nettyClientConfig.setUseTLS(Boolean.parseBoolean(System.getProperty(TLS_ENABLE,
                 String.valueOf(TlsSystemConfig.tlsMode == TlsMode.ENFORCING))));
+            //设置端口号
             nettyServerConfig.setListenPort(10911);
+            //设置存储消息的配置
             final MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
 
             if (BrokerRole.SLAVE == messageStoreConfig.getBrokerRole()) {
@@ -154,6 +166,7 @@ public class BrokerStartup {
                 }
             }
 
+            //根据 Broker 角色和部署方式设置BrokerId
             switch (messageStoreConfig.getBrokerRole()) {
                 case ASYNC_MASTER:
                 case SYNC_MASTER:
@@ -199,6 +212,7 @@ public class BrokerStartup {
             MixAll.printObjectProperties(log, nettyClientConfig);
             MixAll.printObjectProperties(log, messageStoreConfig);
 
+            //创建BrokerController
             final BrokerController controller = new BrokerController(
                 brokerConfig,
                 nettyServerConfig,
@@ -207,12 +221,14 @@ public class BrokerStartup {
             // remember all configs to prevent discard
             controller.getConfiguration().registerConfig(properties);
 
+            //初始化BrokerController
             boolean initResult = controller.initialize();
             if (!initResult) {
                 controller.shutdown();
                 System.exit(-3);
             }
 
+            //JVM 关闭时执行的钩子函数，用于释放资源
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
                 private volatile boolean hasShutdown = false;
                 private AtomicInteger shutdownTimes = new AtomicInteger(0);
