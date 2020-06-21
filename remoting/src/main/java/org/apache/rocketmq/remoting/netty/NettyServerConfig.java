@@ -29,6 +29,7 @@ public class NettyServerConfig implements Cloneable {
     //Netty 的 IO 线程数，负责解析网路请求，解析完网络请求之后，转发给 worker 线程处理
     private int serverSelectorThreads = 3;
     //信号量配置
+    //对于单向和异步发送的请求进行信号量限流处理
     private int serverOnewaySemaphoreValue = 256;
     private int serverAsyncSemaphoreValue = 64;
     //网络连接空闲超过120s，就会被关闭

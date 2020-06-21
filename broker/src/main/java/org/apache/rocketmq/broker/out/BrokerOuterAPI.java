@@ -47,6 +47,9 @@ import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Broker 通过 Netty 客户端向 NameServer 发送请求
+ */
 public class BrokerOuterAPI {
     private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final RemotingClient remotingClient;
@@ -111,6 +114,7 @@ public class BrokerOuterAPI {
 
         List<String> nameServerAddressList = this.remotingClient.getNameServerAddressList();
         if (nameServerAddressList != null) {
+            //向所有的 NameServer 都注册
             for (String namesrvAddr : nameServerAddressList) {
                 try {
                     RegisterBrokerResult result = this.registerBroker(namesrvAddr, clusterName, brokerAddr, brokerName, brokerId,
@@ -129,6 +133,9 @@ public class BrokerOuterAPI {
         return registerBrokerResult;
     }
 
+    /**
+     * Broker 向 NameServer 注册
+     */
     private RegisterBrokerResult registerBroker(
         final String namesrvAddr,
         final String clusterName,
@@ -142,21 +149,26 @@ public class BrokerOuterAPI {
         final int timeoutMills
     ) throws RemotingCommandException, MQBrokerException, RemotingConnectException, RemotingSendRequestException, RemotingTimeoutException,
         InterruptedException {
+        //请求 Header 封装
         RegisterBrokerRequestHeader requestHeader = new RegisterBrokerRequestHeader();
         requestHeader.setBrokerAddr(brokerAddr);
         requestHeader.setBrokerId(brokerId);
         requestHeader.setBrokerName(brokerName);
         requestHeader.setClusterName(clusterName);
         requestHeader.setHaServerAddr(haServerAddr);
+        //请求的命令为REGISTER_BROKER
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.REGISTER_BROKER, requestHeader);
 
+        //封装请求的 Body 数据
         RegisterBrokerBody requestBody = new RegisterBrokerBody();
+        //只有 Topic 路由数据和 filter 过滤器放入到 body 中传输
         requestBody.setTopicConfigSerializeWrapper(topicConfigWrapper);
         requestBody.setFilterServerList(filterServerList);
         request.setBody(requestBody.encode());
 
         if (oneway) {
             try {
+                //通过 netty 向 NameServer 发送请求命令
                 this.remotingClient.invokeOneway(namesrvAddr, request, timeoutMills);
             } catch (RemotingTooMuchRequestException e) {
                 // Ignore
@@ -164,6 +176,7 @@ public class BrokerOuterAPI {
             return null;
         }
 
+        //同步调用
         RemotingCommand response = this.remotingClient.invokeSync(namesrvAddr, request, timeoutMills);
         assert response != null;
         switch (response.getCode()) {
