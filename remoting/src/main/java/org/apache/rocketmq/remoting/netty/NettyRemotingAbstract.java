@@ -376,9 +376,9 @@ public abstract class NettyRemotingAbstract {
                         responseFuture.setSendRequestOK(false);
                     }
 
-                    //todo 为什么putResponse是会在请求失败的情况才会有
                     responseTable.remove(opaque);
                     responseFuture.setCause(f.cause());
+                    //如果执行失败，也会结束后续responseFuture的等待
                     responseFuture.putResponse(null);
                     log.warn("send a request command to channel <" + addr + "> failed.");
                 }

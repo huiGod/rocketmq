@@ -99,6 +99,9 @@ public class RouteInfoManager {
         return topicList.encode();
     }
 
+    /**
+     * Broker 注册到 NameServer，保存对应的 Broker 节点信息以及对应的 Topic 路由信息
+     */
     public RegisterBrokerResult registerBroker(
         final String clusterName,
         final String brokerAddr,
@@ -145,6 +148,7 @@ public class RouteInfoManager {
                     }
                 }
 
+                //保存心跳时间数据，供后续判断存活的 broker
                 BrokerLiveInfo prevBrokerLiveInfo = this.brokerLiveTable.put(brokerAddr,
                     new BrokerLiveInfo(
                         System.currentTimeMillis(),
@@ -418,6 +422,7 @@ public class RouteInfoManager {
                 RemotingUtil.closeChannel(next.getValue().getChannel());
                 it.remove();
                 log.warn("The broker channel expired, {} {}ms", next.getKey(), BROKER_CHANNEL_EXPIRED_TIME);
+                //超时的话关闭 broker 对应的一些维护信息
                 this.onChannelDestroy(next.getKey(), next.getValue().getChannel());
             }
         }
