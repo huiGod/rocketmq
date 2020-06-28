@@ -139,6 +139,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
     }
 
     public void start(final boolean startFactory) throws MQClientException {
+        //实例启动时的状态变化
         switch (this.serviceState) {
             case CREATE_JUST:
                 this.serviceState = ServiceState.START_FAILED;
@@ -146,11 +147,14 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 this.checkConfig();
 
                 if (!this.defaultMQProducer.getProducerGroup().equals(MixAll.CLIENT_INNER_PRODUCER_GROUP)) {
+                    //实例名默认会是进程号
                     this.defaultMQProducer.changeInstanceNameToPID();
                 }
 
+                //通过单例的客户端管理组件,创建客户端实例
                 this.mQClientFactory = MQClientManager.getInstance().getAndCreateMQClientInstance(this.defaultMQProducer, rpcHook);
 
+                //生产者注册到生产组
                 boolean registerOK = mQClientFactory.registerProducer(this.defaultMQProducer.getProducerGroup(), this);
                 if (!registerOK) {
                     this.serviceState = ServiceState.CREATE_JUST;
@@ -183,7 +187,12 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         this.mQClientFactory.sendHeartbeatToAllBrokerWithLock();
     }
 
+    /**
+     * 校验生产者实例基本的配置
+     * @throws MQClientException
+     */
     private void checkConfig() throws MQClientException {
+        //校验生产组名
         Validators.checkGroup(this.defaultMQProducer.getProducerGroup());
 
         if (null == this.defaultMQProducer.getProducerGroup()) {
