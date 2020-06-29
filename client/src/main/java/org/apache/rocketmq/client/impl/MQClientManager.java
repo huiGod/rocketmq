@@ -52,7 +52,7 @@ public class MQClientManager {
      * 创建客户端
      */
     public MQClientInstance getAndCreateMQClientInstance(final ClientConfig clientConfig, RPCHook rpcHook) {
-        //ip+实例名唯一标识客户端
+        //ip+实例名（默认是进程号）唯一标识客户端
         String clientId = clientConfig.buildMQClientId();
         MQClientInstance instance = this.factoryTable.get(clientId);
         if (null == instance) {
