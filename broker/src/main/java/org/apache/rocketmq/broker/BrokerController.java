@@ -419,7 +419,7 @@ public class BrokerController {
     }
 
     /**
-     * 对应请求不同的命令，有不同的处理器
+     * 对应请求不同的命令，有不同的处理器。同时对应不同的线程池
      */
     public void registerProcessor() {
         /**

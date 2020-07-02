@@ -89,6 +89,10 @@ public class MQFaultStrategy {
             return tpInfo.selectOneMessageQueue();
         }
 
+        /**
+         * 第一次随机一个队列
+         * 后续随机一个与之前不同的队列
+         */
         return tpInfo.selectOneMessageQueue(lastBrokerName);
     }
 
