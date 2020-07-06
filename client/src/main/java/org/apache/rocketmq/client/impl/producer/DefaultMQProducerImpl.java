@@ -466,7 +466,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
             SendResult sendResult = null;
             //同步发送，会总共容错发送3次
             //1.异常 Exception 情况下会重试
-            //2.同步发送，结果返回失败情况，并且retryAnotherBrokerWhenNotStoreOK开关为 true 也会重试
+            //2.同步发送失败，并且retryAnotherBrokerWhenNotStoreOK开关为 true 也会重试
             int timesTotal = communicationMode == CommunicationMode.SYNC ? 1 + this.defaultMQProducer.getRetryTimesWhenSendFailed() : 1;
             int times = 0;
             String[] brokersSent = new String[timesTotal];
@@ -706,6 +706,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
 
                 SendResult sendResult = null;
                 switch (communicationMode) {
+                    //异步调用，会执行回调
                     case ASYNC:
                         sendResult = this.mQClientFactory.getMQClientAPIImpl().sendMessage(
                             brokerAddr,
@@ -722,6 +723,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                             this);
                         break;
                     case ONEWAY:
+                        //同步调用
                     case SYNC:
                         sendResult = this.mQClientFactory.getMQClientAPIImpl().sendMessage(
                             brokerAddr,

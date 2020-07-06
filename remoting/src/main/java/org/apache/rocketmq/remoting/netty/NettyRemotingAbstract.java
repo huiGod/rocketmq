@@ -247,7 +247,8 @@ public abstract class NettyRemotingAbstract {
 
     /**
      * Process response from remote peer to the previous issued requests.
-     *
+     * 处理 Netty 的响应命令逻辑
+     * 请求<->响应通过opaque随机数来唯一标识
      * @param ctx channel handler context.
      * @param cmd response command instance.
      */
@@ -260,9 +261,12 @@ public abstract class NettyRemotingAbstract {
             responseTable.remove(opaque);
 
             if (responseFuture.getInvokeCallback() != null) {
+                //如果是异步调用有回调，则调用
                 executeInvokeCallback(responseFuture);
             } else {
+                //countDownLatch唤醒同步调用时获取结果的阻塞
                 responseFuture.putResponse(cmd);
+                //信号量的释放
                 responseFuture.release();
             }
         } else {
@@ -273,6 +277,7 @@ public abstract class NettyRemotingAbstract {
 
     /**
      * Execute callback in callback executor. If callback executor is null, run directly in current thread
+     * 如果异步回调报错，或者线程池为空，则用当前线程调用
      */
     private void executeInvokeCallback(final ResponseFuture responseFuture) {
         boolean runInThisThread = false;
@@ -362,6 +367,7 @@ public abstract class NettyRemotingAbstract {
 
         try {
             final ResponseFuture responseFuture = new ResponseFuture(opaque, timeoutMillis, null, null);
+            //网络透传opaque标识请求与响应
             this.responseTable.put(opaque, responseFuture);
             final SocketAddress addr = channel.remoteAddress();
             //网络请求发送是异步处理，结果用监听器来监听
@@ -370,6 +376,7 @@ public abstract class NettyRemotingAbstract {
                 public void operationComplete(ChannelFuture f) throws Exception {
                     //同步请求的结果监听
                     if (f.isSuccess()) {
+                        //如果 Netty 成功响应，解析命令时会通过opaque来获取ResponseFuture，唤醒后续结果的获取
                         responseFuture.setSendRequestOK(true);
                         return;
                     } else {
