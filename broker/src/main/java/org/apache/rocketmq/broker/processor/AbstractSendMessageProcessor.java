@@ -286,6 +286,7 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
                     (SendMessageRequestHeaderV2) request
                         .decodeCommandCustomHeader(SendMessageRequestHeaderV2.class);
             case RequestCode.SEND_MESSAGE:
+                //解码 Header
                 if (null == requestHeaderV2) {
                     requestHeader =
                         (SendMessageRequestHeader) request

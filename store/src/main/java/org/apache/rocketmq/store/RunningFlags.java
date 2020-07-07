@@ -16,6 +16,9 @@
  */
 package org.apache.rocketmq.store;
 
+/**
+ * 状态用bit 来表示
+ */
 public class RunningFlags {
 
     private static final int NOT_READABLE_BIT = 1;
