@@ -79,6 +79,7 @@ public class DefaultMessageStore implements MessageStore {
 
     private final AllocateMappedFileService allocateMappedFileService;
 
+    //后台线程，转发 CommitLog 最近更新到 ConsumeQueue 和 IndexFile 中
     private final ReputMessageService reputMessageService;
 
     private final HAService haService;
@@ -230,6 +231,7 @@ public class DefaultMessageStore implements MessageStore {
         } else {
             this.reputMessageService.setReputFromOffset(this.commitLog.getMaxOffset());
         }
+        //消息存储组件启动的时候，启动该线程。用于将 CommitLog的更新时间转发出去，然后让任务处理器去更新 ConsumeQueue 和 IndexFile
         this.reputMessageService.start();
 
         this.haService.start();
@@ -302,6 +304,11 @@ public class DefaultMessageStore implements MessageStore {
         }
     }
 
+    /**
+     * 消息写入MappedFile映射内存，后续根据刷盘策略去决定是否把
+     * @param msg Message instance to store
+     * @return
+     */
     public PutMessageResult putMessage(MessageExtBrokerInner msg) {
         if (this.shutdown) {
             log.warn("message store has shutdown, so putMessage is forbidden");
@@ -345,6 +352,7 @@ public class DefaultMessageStore implements MessageStore {
         }
 
         long beginTime = this.getSystemClock().now();
+        //消息写入 commitLog
         PutMessageResult result = this.commitLog.putMessage(msg);
 
         long eclipseTime = this.getSystemClock().now() - beginTime;
@@ -1369,7 +1377,9 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     public void putMessagePositionInfo(DispatchRequest dispatchRequest) {
+        //找到 Topic 下对应的一个 ConsumeQueue
         ConsumeQueue cq = this.findConsumeQueue(dispatchRequest.getTopic(), dispatchRequest.getQueueId());
+        //将消息写入到 ConsumeQueue
         cq.putMessagePositionInfoWrapper(dispatchRequest);
     }
 
@@ -1409,6 +1419,9 @@ public class DefaultMessageStore implements MessageStore {
         }, 6, TimeUnit.SECONDS);
     }
 
+    /**
+     * 消息转发到ConsumeQueue文件
+     */
     class CommitLogDispatcherBuildConsumeQueue implements CommitLogDispatcher {
 
         @Override
@@ -1426,6 +1439,9 @@ public class DefaultMessageStore implements MessageStore {
         }
     }
 
+    /**
+     * 将消息写入到 IndexFile 文件来构建对应的索引
+     */
     class CommitLogDispatcherBuildIndex implements CommitLogDispatcher {
 
         @Override
@@ -1756,12 +1772,14 @@ public class DefaultMessageStore implements MessageStore {
                         this.reputFromOffset = result.getStartOffset();
 
                         for (int readSize = 0; readSize < result.getSize() && doNext; ) {
+                            //从 commitLog 中获取一个DispatchRequest，用于消息的转发
                             DispatchRequest dispatchRequest =
                                 DefaultMessageStore.this.commitLog.checkMessageAndReturnSize(result.getByteBuffer(), false, false);
                             int size = dispatchRequest.getMsgSize();
 
                             if (dispatchRequest.isSuccess()) {
                                 if (size > 0) {
+                                    //消息转发逻辑
                                     DefaultMessageStore.this.doDispatch(dispatchRequest);
 
                                     if (BrokerRole.SLAVE != DefaultMessageStore.this.getMessageStoreConfig().getBrokerRole()
@@ -1816,6 +1834,7 @@ public class DefaultMessageStore implements MessageStore {
 
             while (!this.isStopped()) {
                 try {
+                    //每隔1毫秒，把最近写入 CommitLog 的消息进行一次转发，转发到 ConsumeQueue 和 IndexFile
                     Thread.sleep(1);
                     this.doReput();
                 } catch (Exception e) {
